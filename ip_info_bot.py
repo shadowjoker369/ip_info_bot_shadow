@@ -1,73 +1,85 @@
+# ======================================================
+# 🔥 Telegram Bot - IP Info Lookup
+# 🚀 Hosted on Render with Webhook
+# 👑 Credit: **SHADOW JOKER**
+# ======================================================
+
 import os
 import requests
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+)
 
-# =========================
-# Bot Token (Render Env Variable থেকে নাও অথবা সরাসরি বসাও)
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
+# -----------------------------
+# BOT CONFIG
+# -----------------------------
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Render → Environment Variables এ সেট করুন
+PORT = int(os.getenv("PORT", 8443))
+HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 
-# Render এর PORT (Render দেয়, fallback = 8080)
-PORT = int(os.getenv("PORT", 8080))
-# =========================
+# -----------------------------
+# IP Lookup Function
+# -----------------------------
+def get_ip_info(ip: str) -> str:
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,isp,query"
+        response = requests.get(url, timeout=5).json()
 
+        if response["status"] == "fail":
+            return f"❌ Invalid IP: {response.get('message', 'Unknown error')}"
 
-# ----------- Commands -----------
+        return (
+            f"🌍 **IP Information**\n\n"
+            f"🔹 IP: `{response['query']}`\n"
+            f"🏳 Country: {response['country']}\n"
+            f"🏙 Region: {response['regionName']}\n"
+            f"🏡 City: {response['city']}\n"
+            f"📡 ISP: {response['isp']}\n\n"
+            f"👑 Credit: **SHADOW JOKER**"
+        )
+    except Exception as e:
+        return f"⚠ Error: {e}"
 
+# -----------------------------
+# Bot Commands
+# -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "**👋 Welcome to IP Info Bot!**\n\n"
-        "🔍 শুধু একটা *IP Address* পাঠাও, আমি বিস্তারিত বলব।\n\n"
-        "📌 উদাহরণ: `8.8.8.8`\n\n"
-        "**💡 Developer:** @YourUsername",
+        "👋 Welcome to IP Info Bot!\n\n"
+        "Use the command:\n"
+        "`/ip <IP_ADDRESS>` to get details.\n\n"
+        "👑 Credit: **SHADOW JOKER**",
         parse_mode="Markdown"
     )
 
-
 async def ip_lookup(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    ip = update.message.text.strip()
-    url = f"http://ip-api.com/json/{ip}?fields=status,message,query,country,regionName,city,isp,org,as,timezone,lat,lon"
-    data = requests.get(url).json()
-
-    if data["status"] == "fail":
-        await update.message.reply_text("❌ *ভুল IP Address দেওয়া হয়েছে!*", parse_mode="Markdown")
+    if not context.args:
+        await update.message.reply_text("⚠ Usage: `/ip 8.8.8.8`", parse_mode="Markdown")
         return
 
-    response = (
-        "**🌍 IP Address Information**\n\n"
-        f"🔹 **IP:** `{data['query']}`\n"
-        f"🏳 **Country:** {data['country']}\n"
-        f"🏙 **Region:** {data['regionName']}\n"
-        f"🌆 **City:** {data['city']}\n"
-        f"⏰ **Timezone:** {data['timezone']}\n"
-        f"📡 **ISP:** {data['isp']}\n"
-        f"🏢 **Org:** {data['org']}\n"
-        f"⚡ **AS:** {data['as']}\n"
-        f"📍 **Location:** {data['lat']}, {data['lon']}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "**👨‍💻 Credit:** @YourUsername"
-    )
+    ip = context.args[0]
+    info = get_ip_info(ip)
+    await update.message.reply_text(info, parse_mode="Markdown")
 
-    await update.message.reply_text(response, parse_mode="Markdown")
-
-
-# ----------- Main -----------
-
+# -----------------------------
+# MAIN APP
+# -----------------------------
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Handlers
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ip_lookup))
+    app.add_handler(CommandHandler("ip", ip_lookup))
 
-    # Webhook Mode
+    # ✅ Run Webhook Mode for Render
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
         url_path=BOT_TOKEN,
-        webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
+        webhook_url=f"https://{HOSTNAME}/{BOT_TOKEN}",
     )
-
 
 if __name__ == "__main__":
     main()
