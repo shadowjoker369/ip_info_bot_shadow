@@ -1,84 +1,73 @@
-#!/usr/bin/env python3
 import os
-import logging
 import requests
-from ipaddress import ip_address
-
 from telegram import Update
-from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# -------- CONFIG ----------
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Render env var থেকে নিবে
+# =========================
+# Bot Token (Render Env Variable থেকে নাও অথবা সরাসরি বসাও)
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
 
-IP_API_URL = "http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query,reverse,proxy,mobile,hosting"
-MAPS_LINK = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=10/{lat}/{lon}"
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Render এর PORT (Render দেয়, fallback = 8080)
+PORT = int(os.getenv("PORT", 8080))
+# =========================
 
 
-def query_ip(ip: str) -> dict:
-    try:
-        r = requests.get(IP_API_URL.format(ip=ip), timeout=8)
-        return r.json()
-    except Exception:
-        return {"status": "fail", "message": "API request error"}
+# ----------- Commands -----------
 
-
-def pretty(data: dict) -> str:
-    if data.get("status") != "success":
-        return f"❌ <b>Error:</b> {data.get('message','Unknown')}"
-
-    return (
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🛰️ <b>SHADOW JOKER IP INFO</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🔹 <b>IP:</b> <code>{data['query']}</code>\n"
-        f"🌍 <b>Location:</b>\n   {data['city']}, {data['regionName']}, {data['country']} ({data['zip']})\n"
-        f"📍 <b>Coordinates:</b>\n   {data['lat']}, {data['lon']}\n"
-        f"⏰ <b>Timezone:</b>\n   {data['timezone']}\n"
-        f"🏢 <b>ISP:</b>\n   {data['isp']}\n"
-        f"🏷️ <b>Org:</b>\n   {data['org']}\n"
-        f"🛰️ <b>ASN:</b>\n   {data['as']}\n\n"
-        f"🌐 <a href='{MAPS_LINK.format(lat=data['lat'], lon=data['lon'])}'>📌 View on Map</a>\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚡ <i>Powered by SHADOW JOKER</i>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━"
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "**👋 Welcome to IP Info Bot!**\n\n"
+        "🔍 শুধু একটা *IP Address* পাঠাও, আমি বিস্তারিত বলব।\n\n"
+        "📌 উদাহরণ: `8.8.8.8`\n\n"
+        "**💡 Developer:** @YourUsername",
+        parse_mode="Markdown"
     )
 
 
-async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def ip_lookup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ip = update.message.text.strip()
-    try:
-        ip_address(ip)  # valid কিনা চেক করবে
-    except Exception:
-        await update.message.reply_text("⚠️ Please send a valid IP address.")
+    url = f"http://ip-api.com/json/{ip}?fields=status,message,query,country,regionName,city,isp,org,as,timezone,lat,lon"
+    data = requests.get(url).json()
+
+    if data["status"] == "fail":
+        await update.message.reply_text("❌ *ভুল IP Address দেওয়া হয়েছে!*", parse_mode="Markdown")
         return
 
-    data = query_ip(ip)
-    await update.message.reply_text(
-        pretty(data),
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True
+    response = (
+        "**🌍 IP Address Information**\n\n"
+        f"🔹 **IP:** `{data['query']}`\n"
+        f"🏳 **Country:** {data['country']}\n"
+        f"🏙 **Region:** {data['regionName']}\n"
+        f"🌆 **City:** {data['city']}\n"
+        f"⏰ **Timezone:** {data['timezone']}\n"
+        f"📡 **ISP:** {data['isp']}\n"
+        f"🏢 **Org:** {data['org']}\n"
+        f"⚡ **AS:** {data['as']}\n"
+        f"📍 **Location:** {data['lat']}, {data['lon']}\n\n"
+        "━━━━━━━━━━━━━━━\n"
+        "**👨‍💻 Credit:** @YourUsername"
     )
 
+    await update.message.reply_text(response, parse_mode="Markdown")
+
+
+# ----------- Main -----------
 
 def main():
-    if not BOT_TOKEN:
-        raise RuntimeError("⚠️ TELEGRAM_BOT_TOKEN environment variable not set!")
+    app = Application.builder().token(BOT_TOKEN).build()
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+    # Handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ip_lookup))
 
-    print("✅ Bot started (Professional Box Style)")
-    app.run_polling()
+    # Webhook Mode
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=BOT_TOKEN,
+        webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
+    )
 
 
 if __name__ == "__main__":
-
     main()
-
