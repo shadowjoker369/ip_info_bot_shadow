@@ -9,7 +9,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
 # -------- CONFIG ----------
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Render env var থেকে নিবে
+BOT_TOKEN = os.getenv("8359601144:AAHN7omhaCCcJY1fOREaxe0QZyq05Y8VgEQ")  # Render env var থেকে নিবে
 
 IP_API_URL = "http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query,reverse,proxy,mobile,hosting"
 MAPS_LINK = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=10/{lat}/{lon}"
@@ -79,4 +79,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
