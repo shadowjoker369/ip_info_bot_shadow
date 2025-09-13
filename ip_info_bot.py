@@ -38,7 +38,7 @@ def get_ip_info(ip: str) -> tuple[str, InlineKeyboardMarkup | None]:
             "╚════════════════════════════╝\n\n"
             f"🆔 *IP*: `{response['query']}`\n"
             f"🏳 *Country*: {response['country']}\n"
-            f"🏙 *Region*: {response['regionName']}\n"
+            f"🏙 *Region*: {response['regionName']}`\n"
             f"🏡 *City*: {response['city']}\n"
             f"📡 *ISP*: {response['isp']}\n\n"
             "╔════════════════════════════╗\n"
@@ -107,14 +107,17 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN APP
 # -----------------------------
 def main():
+    # ✅ ApplicationBuilder v20+ ব্যবহার
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # ✅ Handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ip", ip_lookup))
     app.add_handler(CallbackQueryHandler(button_click))
 
-    # ✅ Webhook mode (Render এ কাজ করবে)
+    # ✅ Webhook (Render) বা Polling (Local)
     if HOSTNAME:
+        print(f"🌐 Running Webhook on https://{HOSTNAME}/{BOT_TOKEN}")
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -122,7 +125,7 @@ def main():
             webhook_url=f"https://{HOSTNAME}/{BOT_TOKEN}",
         )
     else:
-        # ✅ লোকাল টেস্টের জন্য polling
+        print("🔧 Running locally with polling...")
         app.run_polling()
 
 if __name__ == "__main__":
