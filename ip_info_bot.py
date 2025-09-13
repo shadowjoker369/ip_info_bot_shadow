@@ -1,7 +1,7 @@
 # ======================================================
 # 🔥 Telegram Bot - IP Info Lookup
 # 🚀 Hosted on Render with Webhook
-# 👑 Credit: **SHADOW JOKER**
+# 👑 Credit: SHADOW JOKER
 # ======================================================
 
 import os
@@ -16,9 +16,9 @@ from telegram.ext import (
 # -----------------------------
 # BOT CONFIG
 # -----------------------------
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Render → Environment Variables এ সেট করুন
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8359601144:AAF4J9fU9-79bZYLf9Egnk1B__y3CwuFsKc")  
 PORT = int(os.getenv("PORT", 8443))
-HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME", "localhost")
 
 # -----------------------------
 # IP Lookup Function
@@ -32,13 +32,13 @@ def get_ip_info(ip: str) -> str:
             return f"❌ Invalid IP: {response.get('message', 'Unknown error')}"
 
         return (
-            f"🌍 **IP Information**\n\n"
+            f"🌍 *IP Information*\n\n"
             f"🔹 IP: `{response['query']}`\n"
             f"🏳 Country: {response['country']}\n"
             f"🏙 Region: {response['regionName']}\n"
             f"🏡 City: {response['city']}\n"
             f"📡 ISP: {response['isp']}\n\n"
-            f"👑 Credit: **SHADOW JOKER**"
+            f"👑 Credit: *SHADOW JOKER*"
         )
     except Exception as e:
         return f"⚠ Error: {e}"
@@ -51,7 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👋 Welcome to IP Info Bot!\n\n"
         "Use the command:\n"
         "`/ip <IP_ADDRESS>` to get details.\n\n"
-        "👑 Credit: **SHADOW JOKER**",
+        "👑 Credit: *SHADOW JOKER*",
         parse_mode="Markdown"
     )
 
@@ -73,7 +73,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ip", ip_lookup))
 
-    # ✅ Run Webhook Mode for Render
+    # ✅ Webhook mode for Render
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
