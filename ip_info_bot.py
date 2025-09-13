@@ -11,19 +11,20 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
+    CallbackQueryHandler,
 )
 
 # -----------------------------
 # BOT CONFIG
 # -----------------------------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8359601144:AAF4J9fU9-79bZYLf9Egnk1B__y3CwuFsKc")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 PORT = int(os.getenv("PORT", 8443))
-HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME", "localhost")
+HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 
 # -----------------------------
 # IP Lookup Function
 # -----------------------------
-def get_ip_info(ip: str) -> tuple[str, InlineKeyboardMarkup]:
+def get_ip_info(ip: str) -> tuple[str, InlineKeyboardMarkup | None]:
     try:
         url = f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,isp,query,lat,lon"
         response = requests.get(url, timeout=5).json()
@@ -87,6 +88,22 @@ async def ip_lookup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # -----------------------------
+# Callback Handler (Check Again)
+# -----------------------------
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data.startswith("check:"):
+        ip = query.data.split(":", 1)[1]
+        info, keyboard = get_ip_info(ip)
+        await query.edit_message_text(
+            text=info,
+            parse_mode="Markdown",
+            reply_markup=keyboard
+        )
+
+# -----------------------------
 # MAIN APP
 # -----------------------------
 def main():
@@ -94,14 +111,19 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ip", ip_lookup))
+    app.add_handler(CallbackQueryHandler(button_click))
 
-    # ✅ Run Webhook Mode for Render
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=BOT_TOKEN,
-        webhook_url=f"https://{HOSTNAME}/{BOT_TOKEN}",
-    )
+    # ✅ Webhook mode (Render এ কাজ করবে)
+    if HOSTNAME:
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=f"https://{HOSTNAME}/{BOT_TOKEN}",
+        )
+    else:
+        # ✅ লোকাল টেস্টের জন্য polling
+        app.run_polling()
 
 if __name__ == "__main__":
     main()
